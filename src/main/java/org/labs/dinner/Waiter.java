@@ -14,7 +14,8 @@ public class Waiter implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 waiterService.serveMeal();
             }
-        }  catch (InterruptedException e) {
+        } catch (InterruptedException e) {
+            // официантов прерывают, когда все программисты закончили обед
         }
     }
 }

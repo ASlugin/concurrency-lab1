@@ -1,29 +1,25 @@
 package org.labs.dinner;
 
-import org.labs.dinner.service.FairnessService;
-import org.labs.dinner.service.StatisticService;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class Programmer implements Runnable {
 
-    private final Integer number;
-    private final Spoon leftSpoon;
-    private final Spoon rightSpoon;
+    private final int number;
+    private final Spoon firstSpoon;
+    private final Spoon secondSpoon;
     private final WaiterService waiterService;
-
-    private PortionFullness portionFullness = PortionFullness.FULL;
-    private boolean interrupted = false;
-
-    private Long eatenPortionsCounter = 0L;
     private final FairnessService fairnessService;
     private final StatisticService statisticService;
 
-    enum PortionFullness { FULL, EMPTY }
+    private PortionFullness portionFullness = PortionFullness.EMPTY;
+    private boolean finished = false;
+    private long eatenPortions = 0;
+
+    private enum PortionFullness { FULL, EMPTY }
 
     public Programmer(
-            Integer number,
+            int number,
             Spoon leftSpoon,
             Spoon rightSpoon,
             WaiterService waiterService,
@@ -31,8 +27,13 @@ public class Programmer implements Runnable {
             StatisticService statisticService
     ) {
         this.number = number;
-        this.leftSpoon = leftSpoon;
-        this.rightSpoon = rightSpoon;
+        if (leftSpoon.getNumber() < rightSpoon.getNumber()) {
+            this.firstSpoon = leftSpoon;
+            this.secondSpoon = rightSpoon;
+        } else {
+            this.firstSpoon = rightSpoon;
+            this.secondSpoon = leftSpoon;
+        }
         this.waiterService = waiterService;
         this.fairnessService = fairnessService;
         this.statisticService = statisticService;
@@ -40,49 +41,14 @@ public class Programmer implements Runnable {
 
     @Override
     public void run() {
-        try{
-            while (!interrupted) {
+        try {
+            while (!finished) {
                 if (portionFullness == PortionFullness.FULL) {
-
-                    // берем две ложки
-                    fairnessService.checkBeforeDinner(this);
-                    if (leftSpoon.getNumber() < rightSpoon.getNumber()) {
-                        leftSpoon.acquire();
-                        rightSpoon.acquire();
-                    } else {
-                        rightSpoon.acquire();
-                        leftSpoon.acquire();
-                    }
-
-                    try {
-                        // едим от 0 до 10 мс
-                        // Thread.sleep(((int) (Math.random() * 10)));
-
-                        // доели
-                        portionFullness = PortionFullness.EMPTY;
-                        eatenPortionsCounter++;
-                    } finally {
-                        // возвращаем ложки
-                        leftSpoon.release();
-                        rightSpoon.release();
-                        fairnessService.checkAfterDinner(this);
-                    }
-
-                    // перерыв на поболтать от 0 до 2 мс
-                    // Thread.sleep(((int) (Math.random() * 2)));
-
-                } else if (portionFullness == PortionFullness.EMPTY) {
-                    // вызвать официанта
-                    Future<Boolean> served = waiterService.orderMeal(this);
-                    if (served.get()) {
-                        portionFullness =  PortionFullness.FULL;
-                    } else {
-                        interrupted = true;
-                    }
+                    eat();
+                } else {
+                    callWaiter();
                 }
             }
-
-
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         } finally {
@@ -91,11 +57,44 @@ public class Programmer implements Runnable {
         }
     }
 
-    public Integer getNumber() {
+    private void eat() throws InterruptedException {
+        fairnessService.checkBeforeDinner(this);
+
+        // берем две ложки
+        firstSpoon.acquire();
+        secondSpoon.acquire();
+        try {
+            // едим от 0 до 10 мс
+            // Thread.sleep(((int) (Math.random() * 10)));
+
+            // доели
+            portionFullness = PortionFullness.EMPTY;
+            eatenPortions++;
+        } finally {
+            // возвращаем ложки
+            secondSpoon.release();
+            firstSpoon.release();
+            fairnessService.checkAfterDinner(this);
+        }
+
+        // перерыв на поболтать от 0 до 2 мс
+        // Thread.sleep(((int) (Math.random() * 2)));
+    }
+
+    private void callWaiter() throws InterruptedException, ExecutionException {
+        Future<Boolean> served = waiterService.orderMeal(this);
+        if (served.get()) {
+            portionFullness = PortionFullness.FULL;
+        } else {
+            finished = true;
+        }
+    }
+
+    public int getNumber() {
         return number;
     }
 
-    public Long getEatenPortions() {
-        return eatenPortionsCounter;
+    public long getEatenPortions() {
+        return eatenPortions;
     }
 }

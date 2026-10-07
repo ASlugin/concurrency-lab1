@@ -1,6 +1,4 @@
-package org.labs.dinner.service;
-
-import org.labs.dinner.Programmer;
+package org.labs.dinner;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +16,6 @@ public class FairnessService {
     public FairnessService(int maxDelta, int programmerCount) {
         this.maxDelta = maxDelta;
         this.eatenPortionsByProgrammer = new ConcurrentHashMap<>(programmerCount);
-        this.eatenPortionsByProgrammer.put(0, 0L);
     }
 
     public void checkBeforeDinner(Programmer programmer) throws InterruptedException {

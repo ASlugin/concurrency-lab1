@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Spoon {
 
     private final int number;
-    private final Lock locked = new ReentrantLock();
+    private final Lock lock = new ReentrantLock();
 
     public Spoon(int number) {
         this.number = number;
@@ -17,10 +17,10 @@ public class Spoon {
     }
 
     public void acquire() {
-        locked.lock();
+        lock.lock();
     }
 
     public void release() {
-        locked.unlock();
+        lock.unlock();
     }
 }
